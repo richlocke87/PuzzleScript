@@ -11,6 +11,7 @@ x to action.......................
 z to undo, r to restart...........
 */
 
+
 var RandomGen = new RNG();
 
 var intro_template = [
@@ -18,7 +19,7 @@ var intro_template = [
 	"..................................",
 	"..................................",
 	"......Puzzle Script Terminal......",
-	"..............v 1.0...............",
+	"..............v 1.6...............",
 	"..................................",
 	"..................................",
 	"..................................",
@@ -234,7 +235,7 @@ function generateTitleScreen()
 }
 
 var introstate = {
-	title: "2D Whale World",
+	title: "EMPTY GAME",
 	attribution: "increpare",
    	objectCount: 2,
    	metadata:[],
@@ -562,6 +563,37 @@ function level4Serialization() {
 	return ret;
 }
 
+
+function tryDeactivateYoutube(){
+	var youtubeFrame = document.getElementById("youtubeFrame");
+	if (youtubeFrame){
+		document.body.removeChild(youtubeFrame);
+	}
+}
+
+function tryActivateYoutube(){
+	var youtubeFrame = document.getElementById("youtubeFrame");
+	if (youtubeFrame){
+		return;
+	}
+	if (canYoutube) {
+		if ('youtube' in state.metadata) {
+			var youtubeid=state.metadata['youtube'];
+			var url = "https://www.youtube.com/embed/"+youtubeid+"?autoplay=1&loop=1&playlist="+youtubeid;
+			ifrm = document.createElement("IFRAME");
+			ifrm.setAttribute("src",url);
+			ifrm.setAttribute("id","youtubeFrame");
+			ifrm.style.visibility="hidden";
+			ifrm.style.width="500px";
+			ifrm.style.height="500px";
+			ifrm.style.position="absolute";
+			ifrm.style.top="-1000px";
+			ifrm.style.left="-1000px";
+			document.body.appendChild(ifrm);
+		}
+	}
+}
+
 function setGameState(_state, command, randomseed) {
 	oldflickscreendat=[];
 	timer=0;
@@ -588,7 +620,6 @@ function setGameState(_state, command, randomseed) {
 
 	state = _state;
 
-    window.console.log('setting game state :D ');
     if (command[0]!=="rebuild"){
     	backups=[];
     }
@@ -657,6 +688,28 @@ function setGameState(_state, command, randomseed) {
 			//do nothing
 			break;
 		}
+		case "loadFirstNonMessageLevel":{
+			for (var i=0;i<state.levels.length;i++){
+				if (state.levels[i].hasOwnProperty("message")){
+					continue;
+				}
+				var targetLevel = i;
+				curlevel=i;
+			    winning=false;
+			    timer=0;
+			    titleScreen=false;
+			    textMode=false;
+			    titleSelection=(curlevel>0||curlevelTarget!==null)?1:0;
+			    titleSelected=false;
+			    quittingMessageScreen=false;
+			    quittingTitleScreen=false;
+			    messageselected=false;
+			    titleMode = 0;
+				loadLevelFromState(state,targetLevel,randomseed);
+				break;
+			}
+			break;	
+		}
 		case "loadLevel":
 		{
 			var targetLevel = command[1];
@@ -723,52 +776,10 @@ function setGameState(_state, command, randomseed) {
 	canvasResize();
 
 
-
-	if (canYoutube) {
-		if ('youtube' in state.metadata) {
-			var youtubeid=state.metadata['youtube'];
-			var url = "https://www.youtube.com/embed/"+youtubeid+"?autoplay=1&loop=1&playlist="+youtubeid;
-			ifrm = document.createElement("IFRAME");
-			ifrm.setAttribute("src",url);
-			ifrm.style.visibility="hidden";
-			ifrm.style.width="500px";
-			ifrm.style.height="500px";
-			ifrm.style.position="absolute";
-			ifrm.style.top="-1000px";
-			ifrm.style.left="-1000px";
-//			ifrm.style.display="none";
-			document.body.appendChild(ifrm);
-		}
-
-		/*
-		if ('youtube' in state.metadata) {
-			var div_container = document.createElement('DIV');
-			var div_front = document.createElement('DIV');
-			div_front.style.zIndex=-100;	
-			div_front.style.backgroundColor=state.bgcolor;
-			div_front.style.position= "absolute";
-			div_front.style.width="500px";
-			div_front.style.height="500px";
-			var div_back = document.createElement('DIV');
-			div_back.style.zIndex=-200;
-			div_back.style.position= "absolute";
-			
-			div_container.appendChild(div_back);
-			div_container.appendChild(div_front);
-			
-			var youtubeid=state.metadata['youtube'];
-			var url = "https://youtube.googleapis.com/v/"+youtubeid+"?autoplay=1&loop=1&playlist="+youtubeid;
-			ifrm = document.createElement("IFRAME");
-			ifrm.setAttribute("src",url);
-			ifrm.style.visibility="hidden";
-			ifrm.style.width="500px";
-			ifrm.style.height="500px";
-			ifrm.frameBorder="0";
-//			ifrm.style.display="none";
-
-			div_back.appendChild(ifrm);
-			document.body.appendChild(div_container);
-			*/
+	if (state.sounds.length==0&&state.metadata.youtube==null){
+		killAudioButton();
+	} else {
+		showAudioButton();
 	}
 	
 }
@@ -1063,6 +1074,7 @@ function restoreLevel(lev) {
 
     againing=false;
     level.commandQueue=[];
+    level.commandQueueSourceRules=[];
 }
 
 var zoomscreen=false;
@@ -1094,6 +1106,7 @@ function DoRestart(force) {
 	}
 	
 	level.commandQueue=[];
+	level.commandQueueSourceRules=[];
 	restarting=false;
 }
 
@@ -1288,6 +1301,7 @@ function Level(lineNumber, width, height, layerCount, objects) {
 	this.objects = objects;
 	this.layerCount = layerCount;
 	this.commandQueue = [];
+	this.commandQueueSourceRules = [];
 }
 
 Level.prototype.clone = function() {
@@ -2062,13 +2076,13 @@ var rigidBackups=[]
 function commitPreservationState(ruleGroupIndex) {
 	var propagationState = {
 		ruleGroupIndex:ruleGroupIndex,
-		//don't need to know the tuple index
 		objects:new Int32Array(level.objects),
 		movements:new Int32Array(level.movements),
 		rigidGroupIndexMask:level.rigidGroupIndexMask.concat([]),
 		rigidMovementAppliedMask:level.rigidMovementAppliedMask.concat([]),
 		bannedGroup:level.bannedGroup.concat([]),
-		commandQueue:level.commandQueue.concat([])
+		commandQueue:level.commandQueue.concat([]),
+		commandQueueSourceRules:level.commandQueueSourceRules.concat([])
 	};
 	rigidBackups[ruleGroupIndex]=propagationState;
 	return propagationState;
@@ -2081,6 +2095,7 @@ function restorePreservationState(preservationState) {;
 	level.rigidGroupIndexMask = preservationState.rigidGroupIndexMask.concat([]);
     level.rigidMovementAppliedMask = preservationState.rigidMovementAppliedMask.concat([]);
     level.commandQueue = preservationState.commandQueue.concat([]);
+    level.commandQueueSourceRules = preservationState.commandQueueSourceRules.concat([]);
     sfxCreateMask.setZero();
     sfxDestroyMask.setZero();
 	consolePrint("Rigid movement application failed, rolling back");
@@ -2246,12 +2261,13 @@ Rule.prototype.queueCommands = function(numMatches) {
 			continue;
 		}
 		level.commandQueue.push(command[0]);
+		level.commandQueueSourceRules.push(this);
 
 		if (verbose_logging){
 			var lineNumber = this.lineNumber;
 			var ruleDirection = dirMaskName[this.direction];
 			var logString = '<font color="green">Rule <a onclick="jumpToLine(' + lineNumber.toString() + ');"  href="javascript:void(0);">' + lineNumber.toString() + '</a> triggers command '+command[0]+'.</font>';
-			consolePrint(logString);
+			consolePrint(logString,true);
 		}
 
 		if (command[0]==='message') {			
@@ -2462,7 +2478,7 @@ function calculateRowColMasks() {
 }
 
 /* returns a bool indicating if anything changed */
-function processInput(dir,dontCheckWin,dontModify) {
+function processInput(dir,dontDoWin,dontModify) {
 	againing = false;
 
 	if (verbose_logging) { 
@@ -2513,6 +2529,7 @@ function processInput(dir,dontCheckWin,dontModify) {
         level.bannedGroup = [];
         rigidBackups = [];
         level.commandQueue=[];
+        level.commandQueueSourceRules=[];
         var startRuleGroupIndex=0;
         var rigidloop=false;
         var startState = commitPreservationState();
@@ -2573,10 +2590,13 @@ function processInput(dir,dontCheckWin,dontModify) {
         	//play player cantmove sounds here
         }
 
-	    if (level.commandQueue.indexOf('cancel')>=0) {	
+
+
+	    if (level.commandQueue.indexOf('cancel')>=0) {
 	    	if (verbose_logging) { 
 	    		consoleCacheDump();
-	    		consolePrint('CANCEL command executed, cancelling turn.',true);
+	    		var r = level.commandQueueSourceRules[level.commandQueue.indexOf('cancel')];
+	    		consolePrintFromRule('CANCEL command executed, cancelling turn.',r,true);
 			}
     		backups.push(bak);
 			messagetext = "";
@@ -2587,7 +2607,8 @@ function processInput(dir,dontCheckWin,dontModify) {
 
 	    if (level.commandQueue.indexOf('restart')>=0) {
 	    	if (verbose_logging) { 
-	    		consolePrint('RESTART command executed, reverting to restart state.');
+	    		var r = level.commandQueueSourceRules[level.commandQueue.indexOf('restart')];
+	    		consolePrintFromRule('RESTART command executed, reverting to restart state.',r);
 	    		consoleCacheDump();
 			}
     		backups.push(bak);
@@ -2663,17 +2684,21 @@ function processInput(dir,dontCheckWin,dontModify) {
 			}
 	    }
 
-	    if (textMode===false && (dontCheckWin===undefined ||dontCheckWin===false)) {
+	    if (textMode===false) {
 	    	if (verbose_logging) { 
 	    		consolePrint('Checking win condition.');
 			}
-	    	checkWin();
+			if (dontDoWin===undefined){
+				dontDoWin = false;
+			}
+	    	checkWin( dontDoWin );
 	    }
 
 	    if (!winning) {
 			if (level.commandQueue.indexOf('checkpoint')>=0) {
 		    	if (verbose_logging) { 
-		    		consolePrint('CHECKPOINT command executed, saving current state to the restart state.');
+	    			var r = level.commandQueueSourceRules[level.commandQueue.indexOf('checkpoint')];
+		    		consolePrintFromRule('CHECKPOINT command executed, saving current state to the restart state.',r);
 				}
 				restartTarget=level4Serialization();
 				hasUsedCheckpoint=true;
@@ -2683,6 +2708,9 @@ function processInput(dir,dontCheckWin,dontModify) {
 			}	 
 
 		    if (level.commandQueue.indexOf('again')>=0 && modified) {
+
+	    		var r = level.commandQueueSourceRules[level.commandQueue.indexOf('again')];
+
 		    	//first have to verify that something's changed
 		    	var old_verbose_logging=verbose_logging;
 		    	var oldmessagetext = messagetext;
@@ -2691,7 +2719,7 @@ function processInput(dir,dontCheckWin,dontModify) {
 			    	verbose_logging=old_verbose_logging;
 
 			    	if (verbose_logging) { 
-			    		consolePrint('AGAIN command executed, with changes detected - will execute another turn.');
+			    		consolePrintFromRule('AGAIN command executed, with changes detected - will execute another turn.',r);
 					}
 
 			    	againing=true;
@@ -2699,7 +2727,7 @@ function processInput(dir,dontCheckWin,dontModify) {
 			    } else {		    	
 			    	verbose_logging=old_verbose_logging;
 					if (verbose_logging) { 
-						consolePrint('AGAIN command not executed, it wouldn\'t make any changes.');
+						consolePrintFromRule('AGAIN command not executed, it wouldn\'t make any changes.',r);
 					}
 			    }
 			    verbose_logging=old_verbose_logging;
@@ -2709,6 +2737,7 @@ function processInput(dir,dontCheckWin,dontModify) {
 		    
 
 	    level.commandQueue=[];
+	    level.commandQueueSourceRules=[];
 
     }
 
@@ -2723,10 +2752,10 @@ function processInput(dir,dontCheckWin,dontModify) {
 	return modified;
 }
 
-function checkWin() {
+function checkWin(dontDoWin) {
 
 	if (levelEditorOpened) {
-		return;
+		dontDoWin=true;
 	}
 
 	if (level.commandQueue.indexOf('win')>=0) {
@@ -2734,7 +2763,11 @@ function checkWin() {
             state.winConditionsMet = true;
         } else {
             consolePrint("Win Condition Satisfied");
-            DoWin();
+
+            if (!dontDoWin) {
+                DoWin();
+            }
+
             return;
         }
 	}
@@ -2802,7 +2835,10 @@ function checkWin() {
             state.winConditionsMet = true;
         } else {
             consolePrint("Win Condition Satisfied");
-            DoWin();
+
+            if (!dontDoWin) {
+                DoWin();
+            }
         }
 	}
 }
@@ -2871,14 +2907,16 @@ function nextLevel() {
 				loadLevelFromState(state,curlevel);
 			}
 		} else {
-			if (!!window.localStorage) {
-				try{
+			try{
+				if (!!window.localStorage) {
+	
 					localStorage.removeItem(document.URL);
 					localStorage.removeItem(document.URL+'_checkpoint');
-				} catch(ex){
-					
 				}
+			} catch(ex){
+					
 			}
+			
 			curlevel=0;
 			curlevelTarget=null;
 			goToTitleScreen();

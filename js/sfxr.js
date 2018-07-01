@@ -15,11 +15,22 @@ var SHAPES = [
 
 var AUDIO_CONTEXT;
 
-if (typeof AudioContext != 'undefined') {
-  AUDIO_CONTEXT = new AudioContext();
-} else if (typeof webkitAudioContext != 'undefined') {
-  AUDIO_CONTEXT = new webkitAudioContext();
+function checkAudioContextExists(){
+  try{
+    if (AUDIO_CONTEXT==null){
+      if (typeof AudioContext != 'undefined') {
+        AUDIO_CONTEXT = new AudioContext();
+      } else if (typeof webkitAudioContext != 'undefined') {
+        AUDIO_CONTEXT = new webkitAudioContext();
+      }
+    }
+  }
+  catch (ex){
+    window.console.log(ex)
+  }
 }
+
+checkAudioContextExists();
 
 // Playback volume
 var masterVolume = 1.0;
@@ -973,7 +984,61 @@ function cacheSeed(seed){
 }
 
 function playSound(seed) {
+  if (muted){
+    return;
+  }
+  checkAudioContextExists();
   if (unitTesting) return;
   var sound = cacheSeed(seed);
   sound.play();
+}
+
+
+
+function killAudioButton(){
+  var mb = document.getElementById("muteButton");
+  var umb = document.getElementById("unMuteButton");
+  if (mb){
+    mb.remove();
+    umb.remove();
+  }
+}
+
+function showAudioButton(){
+  var mb = document.getElementById("muteButton");
+  var umb = document.getElementById("unMuteButton");
+  if (mb){
+    mb.style.display="block"; 
+    umb.style.display="none";
+  }
+}
+
+
+function toggleMute() {
+  if (muted===0){
+    muteAudio();
+  } else {
+    unMuteAudio();
+  }
+}
+
+function muteAudio() {
+  muted=1; 
+  tryDeactivateYoutube();
+  var mb = document.getElementById("muteButton");
+  var umb = document.getElementById("unMuteButton");
+  if (mb){
+    mb.style.display="none"; 
+    umb.style.display="block";
+  }
+}
+function unMuteAudio() {
+  muted=0; 
+  tryActivateYoutube();
+  var mb = document.getElementById("muteButton");
+  var umb = document.getElementById("unMuteButton");
+  if (mb){
+    mb.style.display="block"; 
+    umb.style.display="none";
+  }
 }
