@@ -2367,7 +2367,7 @@ function applyRules(rules, loopPoint, startRuleGroupindex, bannedGroup){
         	ruleGroupIndex = loopPoint[ruleGroupIndex];
         	loopPropagated=false;
         	loopCount++;
-			if (loopCount > 200) {
+			if (loopCount > 4000) {
     			var ruleGroup=rules[ruleGroupIndex];
 			   	logErrorCacheable("got caught in an endless startloop...endloop vortex, escaping!", ruleGroup[0].lineNumber,true);
 			   	break;
@@ -2379,7 +2379,7 @@ function applyRules(rules, loopPoint, startRuleGroupindex, bannedGroup){
 		        	ruleGroupIndex = loopPoint[ruleGroupIndex];
 		        	loopPropagated=false;
 		        	loopCount++;
-					if (loopCount > 200) {
+					if (loopCount > 4000) {
 		    			var ruleGroup=rules[ruleGroupIndex];
 					   	logErrorCacheable("got caught in an endless startloop...endloop vortex, escaping!", ruleGroup[0].lineNumber,true);
 					   	break;
