@@ -538,7 +538,7 @@ var simpleAbsoluteDirections = ['up', 'down', 'left', 'right'];
 var simpleRelativeDirections = ['^', 'v', '<', '>'];
 var reg_directions_only = /^(\>|\<|\^|v|up|down|left|right|moving|stationary|no|randomdir|random|horizontal|vertical|orthogonal|perpendicular|parallel|action)$/;
 //redeclaring here, i don't know why
-var commandwords = /|(?:sfx\d+)|cancel|checkpoint|restart|win|message|again|count/;
+var commandwords = /|(?:sfx[A-Za-z0-9_-]+)|cancel|checkpoint|restart|win|message|again|count/;
 
 
 
@@ -2230,7 +2230,7 @@ function generateLoopPoints(state) {
 	state.lateLoopPoint=loopPoint;
 }
 
-var soundEvents = /titlescreen|startgame|cancel|endgame|startlevel|undo|restart|endlevel|showmessage|closemessage|(sfx\d+)/;
+var soundEvents = /titlescreen|startgame|cancel|endgame|startlevel|undo|restart|endlevel|showmessage|closemessage|(?:sfx[A-Za-z0-9_-]+)/;
 
 
 function validSeed (seed ) {

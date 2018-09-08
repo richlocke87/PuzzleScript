@@ -258,6 +258,13 @@
                     }
                 }
 
+                // go through sounds
+                let sfxRegex = /sfx[A-Za-z0-9_-]+/
+                let soundNames = state.sounds
+                    .map(sound => sound[0])
+                    .filter(soundName => sfxRegex.exec(soundName))
+                    .filter(soundName => curWord && soundName.toLowerCase().indexOf(curWord) === 0);
+                list = list.concat(soundNames);
             }
 
             // go through random names
