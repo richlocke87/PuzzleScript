@@ -262,8 +262,8 @@
                 let sfxRegex = /sfx[A-Za-z0-9_-]+/
                 let soundNames = state.sounds
                     .map(sound => sound[0])
-                    .filter(soundName => sfxRegex.exec(soundName))
-                    .filter(soundName => curWord && soundName.toLowerCase().indexOf(curWord) === 0);
+                    .filter(soundName => soundName.startsWith('sfx'))
+                    .filter(soundName => curWord && soundName.indexOf(curWord) === 0 && soundName !== curWord);
                 list = list.concat(soundNames);
             }
 
