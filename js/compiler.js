@@ -538,7 +538,7 @@ var simpleAbsoluteDirections = ['up', 'down', 'left', 'right'];
 var simpleRelativeDirections = ['^', 'v', '<', '>'];
 var reg_directions_only = /^(\>|\<|\^|v|up|down|left|right|moving|stationary|no|randomdir|random|horizontal|vertical|orthogonal|perpendicular|parallel|action)$/;
 //redeclaring here, i don't know why
-var commandwords = ["sfx0","sfx1","sfx2","sfx3","sfx4","sfx5","sfx6","sfx7","sfx8","sfx9","sfx10","cancel","checkpoint","restart","win","message","again","count"];
+var commandwords = /|(?:sfx\d+)|cancel|checkpoint|restart|win|message|again|count/;
 
 
 
@@ -768,7 +768,7 @@ function processRuleString(rule, state, curRules)
  						curcell.push(token);
  						curcell.push(token);
  					}
-				} else if (commandwords.indexOf(token)>=0) {
+				} else if (commandwords.exec(token)) {
 					if (rhs===false) {
 						logError("Commands cannot appear on the left-hand side of the arrow.",lineNumber);
 					}
@@ -2230,9 +2230,7 @@ function generateLoopPoints(state) {
 	state.lateLoopPoint=loopPoint;
 }
 
-var soundEvents = ["titlescreen", "startgame", "cancel", "endgame", "startlevel","undo","restart","endlevel","showmessage","closemessage","sfx0","sfx1","sfx2","sfx3","sfx4","sfx5","sfx6","sfx7","sfx8","sfx9","sfx10"];
-var soundMaskedEvents =["create","destroy","move","cantmove","action"];
-var soundVerbs = soundEvents.concat(soundMaskedEvents);
+var soundEvents = /titlescreen|startgame|cancel|endgame|startlevel|undo|restart|endlevel|showmessage|closemessage|(sfx\d+)/;
 
 
 function validSeed (seed ) {
@@ -2273,7 +2271,7 @@ function generateSoundData(state) {
 			continue;
 		}
 
-		if (soundEvents.indexOf(sound[0])>=0) {
+		if (soundEvents.exec(sound[0])) {
 			if (sound.length>4) {
 				logError("too much stuff to define a sound event.",lineNumber);
 			}
