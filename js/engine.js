@@ -752,8 +752,10 @@ function setGameState(_state, command, randomseed) {
 		}
         case "fragline": {
             var targetLine = command[1];
-            var fragment = _(state.fragments)
-                .orderBy('lineNumber', 'desc')
+            var fragment = state.fragments
+                .sort(function(f1, f2) {
+                    return f1.lineNumber > f2.lineNumber ? -1 : 1;
+                })
                 .find(function(f) { return f.lineNumber <= targetLine + 1 });
 
             winning=false;
@@ -807,7 +809,7 @@ function runGameTests(state) {
  * Prints the overall result of running the test suite
  */
 function printTestSuiteResult(state) {
-    var failingTests = _.filter(state.tests, function(test) { return !test.pass });
+    var failingTests = state.tests.filter(function(test) { return !test.pass });
     var numFailing = failingTests.length;
     var numPassing = state.tests.length - numFailing;
 
@@ -825,7 +827,7 @@ function printTestSuiteResult(state) {
         consolePrint('<span class="errorText">' + numFailing + ' failing</span>');
     }
 
-    _.each(failingTests, function(test, i) {
+    failingTests.forEach(function(test, i) {
         consolePrint('<br />');
         consolePrint((i + 1) + ') ' + test.name + ':');
 
@@ -841,7 +843,8 @@ function printTestSuiteResult(state) {
                 consolePrint('<span class="successText indent symbol">+</span><span class="successText inline noWrap">' + step.expectedFragment.replace(/\n/g, '<br />') + '</span>');
             }
 
-            _.each(step.then.conditions, function(condition) {
+            var conditions = step.then.conditions || [];
+            conditions.forEach(function(condition) {
                 if (!condition.met) {
                     errorFound = true;
                     if ((condition.expectedCount || condition.expectedCount === 0) && condition.actualCount !== condition.expectedCount) {
@@ -895,7 +898,7 @@ function runGameTest(state, test) {
         }
     }
 
-    test.pass = _.every(test.steps, function(step) {
+    test.pass = test.steps.every(function(step) {
         return step.pass;
     });
 
@@ -938,14 +941,14 @@ function runTestStep(state, step) {
         }
 
         // Are the conditions met?
-        _.each(step.then.conditions, function(condition) {
+        step.then.conditions.forEach(function(condition) {
             var winExpectationMet = condition.expectWin ? state.winConditionsMet : true;
             var haveCountExpectation = !!condition.expectedCount || condition.expectedCount === 0;
             var countExpectationMet = !haveCountExpectation || condition.actualCount === condition.expectedCount;
             condition.met = countExpectationMet && winExpectationMet;
         });
 
-        step.conditionsMet = _.every(step.then.conditions, function(condition) {
+        step.conditionsMet = step.then.conditions.every(function(condition) {
             return condition.met;
         });
     }
@@ -2241,8 +2244,8 @@ Rule.prototype.queueCommands = function(numMatches) {
             var rule = this;
             var condition;
             // Have to search through all steps and each step's conditions
-            _.find(test.steps, function(step) {
-                var candidate = _.find(step.then.conditions, function(condition) {
+            test.steps.find(function(step) {
+                var candidate = step.then.conditions.find(function(condition) {
                     return condition.lineNumber === rule.lineNumber;
                 });
 
@@ -2956,4 +2959,50 @@ function goToTitleScreen(){
 	generateTitleScreen();
 }
 
-
+// Polyfill Array.prototype.find for Internet Explorer
+// https://tc39.github.io/ecma262/#sec-array.prototype.find
+if (!Array.prototype.find) {
+	Object.defineProperty(Array.prototype, 'find', {
+	  value: function(predicate) {
+	   // 1. Let O be ? ToObject(this value).
+		if (this == null) {
+		  throw new TypeError('"this" is null or not defined');
+		}
+  
+		var o = Object(this);
+  
+		// 2. Let len be ? ToLength(? Get(O, "length")).
+		var len = o.length >>> 0;
+  
+		// 3. If IsCallable(predicate) is false, throw a TypeError exception.
+		if (typeof predicate !== 'function') {
+		  throw new TypeError('predicate must be a function');
+		}
+  
+		// 4. If thisArg was supplied, let T be thisArg; else let T be undefined.
+		var thisArg = arguments[1];
+  
+		// 5. Let k be 0.
+		var k = 0;
+  
+		// 6. Repeat, while k < len
+		while (k < len) {
+		  // a. Let Pk be ! ToString(k).
+		  // b. Let kValue be ? Get(O, Pk).
+		  // c. Let testResult be ToBoolean(? Call(predicate, T, « kValue, k, O »)).
+		  // d. If testResult is true, return kValue.
+		  var kValue = o[k];
+		  if (predicate.call(thisArg, kValue, k, o)) {
+			return kValue;
+		  }
+		  // e. Increase k by 1.
+		  k++;
+		}
+  
+		// 7. Return undefined.
+		return undefined;
+	  },
+	  configurable: true,
+	  writable: true
+	});
+  }

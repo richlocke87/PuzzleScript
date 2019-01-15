@@ -509,13 +509,13 @@ function processLevel(state, level) {
  * Converts raw level fragments from tests into proper Level objects
  */
 function processLevelFragments(state) {
-	_.each(state.tests, function(test) {
+	state.tests.forEach(function(test) {
 		if (test.given) {
 			test.givenLevel = processLevel(state, test.given);
 			state.fragments.push(test.givenLevel);
 		}
 
-		_.each(test.steps, function(step) {
+		test.steps.forEach(function(step) {
 			if (step.then && step.then.fragment) {
 				step.then.level = processLevel(state, step.then.fragment);
 				state.fragments.push(step.then.level);
@@ -2456,8 +2456,15 @@ function formatHomePage(state){
 }
 
 function processTestConditions(state) {
-	_(state.tests).flatMap('steps').each(function(step) {
-		var allRules = _(step.then.conditions).filter('rule').map('rule').value();
+	state.tests.reduce(function(acc, test) {
+		return acc.concat(test.steps);
+	}, []).forEach(function(step) {
+		var conditions = step.then.conditions || [];
+		var allRules = conditions.filter(function(condition) {
+			return condition.rule;
+		}).map(function(condition) {
+			return condition.rule;
+		});
 
 		if (allRules.length) {
 			step.then.compiledRules = rulesToArray(state, allRules)[0];
